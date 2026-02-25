@@ -30,6 +30,10 @@ Organize your nutrition with a vibrant, intuitive planner. Add meals manually or
 Meet Dr. Nova—your 24/7 AI health consultant. Powered by **DeepSeek API**, Nova provides evidence-based medical-grade nutritional advice, remembers your conversation history, and helps you navigate complex health queries as a professional dietitian.
 ![Ask Nova](./screenshots/ss--6.png)
 
+### 6. **Talk to Nova (Voice Agent)**
+Launch a live, hands-free voice session with Nova. The **Voice Agent** uses **Vapi** for low-latency voice conversations, session controls, and microphone management to deliver a premium, real-time consultation experience.
+![Talk to Nova](./screenshots/ss--7.png)
+
 ---
 
 ## 🚀 Tech Stack
@@ -42,6 +46,7 @@ Meet Dr. Nova—your 24/7 AI health consultant. Powered by **DeepSeek API**, Nov
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Charts**: [Recharts](https://recharts.org/)
 - **Auth**: [Clerk](https://clerk.com/)
+- **Voice Agent**: [Vapi](https://vapi.ai/)
 
 ### Backend & AI
 - **Runtime**: [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
