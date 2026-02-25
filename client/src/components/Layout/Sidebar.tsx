@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Activity, ScanBarcode, Utensils, MessageCircle, Mic, LogOut } from 'lucide-react';
+import { LayoutDashboard, Activity, ScanBarcode, Utensils, MessageCircle, Mic, LogOut, Info, Mail } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useClerk } from '@clerk/clerk-react';
@@ -11,6 +11,8 @@ const menuItems = [
     { icon: Utensils, label: 'Meal Planner', path: '/meal-planner' },
     { icon: MessageCircle, label: 'Ask Nova', path: '/chat' },
     { icon: Mic, label: 'Talk to Nova', path: '/talk-to-nova' },
+    { icon: Info, label: 'About', path: '/about' },
+    { icon: Mail, label: 'Contact', path: '/contact' },
 ];
 
 export const Sidebar = () => {

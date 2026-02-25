@@ -9,6 +9,8 @@ import { MealDetailPage } from './pages/MealDetail';
 import { ChatNova } from './pages/ChatNova';
 import { TalkToNova } from './pages/TalkToNova';
 import { LandingPage } from './pages/LandingPage';
+import { About } from './pages/About';
+import { Contact } from './pages/Contact';
 import { ReactNode } from 'react';
 
 const ROUTES = {
@@ -21,6 +23,8 @@ const ROUTES = {
   mealDetail: '/meal-planner/meal/:mealId',
   chat: '/chat',
   talkToNova: '/talk-to-nova',
+  about: '/about',
+  contact: '/contact',
 } as const;
 
 // Avoids auth flicker-based redirects by waiting until Clerk auth is loaded.
@@ -83,6 +87,8 @@ function App() {
         <Route path={ROUTES.chat} element={<ProtectedRoute><Layout><ChatNova /></Layout></ProtectedRoute>} />
         <Route path={ROUTES.talkToNova} element={<ProtectedRoute><Layout><TalkToNova /></Layout></ProtectedRoute>} />
         <Route path={`${ROUTES.talkToNova}/*`} element={<Navigate to={ROUTES.talkToNova} replace />} />
+        <Route path={ROUTES.about} element={<ProtectedRoute><Layout><About /></Layout></ProtectedRoute>} />
+        <Route path={ROUTES.contact} element={<ProtectedRoute><Layout><Contact /></Layout></ProtectedRoute>} />
 
         {/* Fallback */}
         <Route path="*" element={<AppFallback />} />

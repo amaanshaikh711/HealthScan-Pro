@@ -237,13 +237,18 @@ Provide the clinical nutrition verdict according to your instructions.`;
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">Food Scanner</h2>
-                    <p className="text-gray-500">Scan barcodes or enter them manually for instant insights.</p>
-                </div>
-                <div className="flex gap-2">
+        <div className="max-w-6xl mx-auto space-y-8">
+            <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/50 p-6 sm:p-8">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(20,184,166,0.12),transparent_40%),radial-gradient(circle_at_90%_10%,rgba(56,189,248,0.12),transparent_35%)]" />
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-500">Smart Nutrition Scanner</p>
+                        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mt-2">Food Scanner</h2>
+                        <p className="text-sm sm:text-base text-slate-500 max-w-2xl">
+                            Scan barcodes or enter them manually for instant insights, ingredient clarity, and nutrition guidance.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
                     {product && !scanning && (
                         <Button onClick={resetScanner} variant="outline" icon={<RefreshCw className="w-4 h-4" />}>
                             New Scan
@@ -254,14 +259,13 @@ Provide the clinical nutrition verdict according to your instructions.`;
                     ) : (
                         <Button onClick={stopScan} variant="danger" icon={<XCircle className="w-5 h-5" />}>Stop Camera</Button>
                     )}
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Side: Scanner & Manual Input */}
-                <div className="lg:col-span-1 space-y-6">
-                    {/* Scanner View */}
-                    <Card className="aspect-[3/4] p-0 relative bg-black flex items-center justify-center overflow-hidden border-teal-500/20 shadow-teal-500/10">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                    <Card className="aspect-[3/4] p-0 relative bg-slate-950 flex items-center justify-center overflow-hidden border-white/10 shadow-2xl shadow-slate-900/30">
                         {scanning ? (
                             <>
                                 <video
@@ -272,7 +276,7 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                     autoPlay
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <div className="w-64 h-48 border-2 border-primary/50 rounded-lg relative">
+                                    <div className="w-64 h-48 border-2 border-teal-400/70 rounded-lg relative">
                                         <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary"></div>
                                         <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary"></div>
                                         <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary"></div>
@@ -285,18 +289,18 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                         />
                                     </div>
                                 </div>
-                                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-md px-4 py-1.5 rounded-full text-white text-xs font-medium border border-white/10">
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full text-white text-xs font-medium border border-white/10">
                                     Align barcode within frame
                                 </div>
                             </>
                         ) : (
                             <div className="text-center p-8">
-                                <ScanBarcode className="w-16 h-16 mx-auto mb-4 text-primary opacity-40" />
-                                <p className="text-gray-400 font-medium">Camera is inactive</p>
+                                <ScanBarcode className="w-16 h-16 mx-auto mb-4 text-teal-200/60" />
+                                <p className="text-slate-200 font-semibold">Camera is inactive</p>
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="mt-4 text-gray-500 hover:text-primary"
+                                    className="mt-4 text-slate-300 hover:text-white"
                                     onClick={startScan}
                                 >
                                     Enable Camera
@@ -305,10 +309,9 @@ Provide the clinical nutrition verdict according to your instructions.`;
                         )}
                     </Card>
 
-                    {/* Manual Input */}
-                    <Card className="bg-slate-50 border-slate-200">
-                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Search className="w-4 h-4 text-primary" />
+                    <Card className="bg-white/80 border-white/60 backdrop-blur-xl shadow-lg shadow-slate-200/50">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Search className="w-4 h-4 text-teal-500" />
                             Manual Lookup
                         </h3>
                         <form onSubmit={handleManualSearch} className="space-y-3">
@@ -318,10 +321,10 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                     placeholder="Enter barcode number..."
                                     value={manualBarcode}
                                     onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-gray-700"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all outline-none text-slate-700"
                                     disabled={loading}
                                 />
-                                <p className="text-[10px] text-gray-400 mt-1 ml-1">E.g., 3017620422003 for Nutella</p>
+                                <p className="text-[10px] text-slate-400 mt-1 ml-1">E.g., 3017620422003 for Nutella</p>
                             </div>
                             <Button
                                 type="submit"
@@ -336,8 +339,7 @@ Provide the clinical nutrition verdict according to your instructions.`;
                     </Card>
                 </div>
 
-                {/* Right Side: Results View */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-3">
                     <AnimatePresence mode="wait">
                         {loading && (
                             <motion.div
@@ -348,10 +350,10 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                 className="h-full flex flex-col items-center justify-center py-12"
                             >
                                 <div className="relative w-16 h-16 mb-4">
-                                    <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-                                    <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="absolute inset-0 border-4 border-teal-200/50 rounded-full"></div>
+                                    <div className="absolute inset-0 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
                                 </div>
-                                <p className="text-primary font-medium animate-pulse">Analyzing Product...</p>
+                                <p className="text-teal-600 font-semibold animate-pulse">Analyzing Product...</p>
                             </motion.div>
                         )}
 
@@ -362,7 +364,7 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                             >
-                                <Card className="bg-red-50 border-red-200 text-red-700 flex flex-col items-center gap-4 py-12 text-center">
+                                <Card className="bg-rose-50 border-rose-200 text-rose-700 flex flex-col items-center gap-4 py-12 text-center">
                                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
                                         <AlertCircle className="w-8 h-8 text-red-500" />
                                     </div>
@@ -384,9 +386,8 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                 animate={{ opacity: 1, y: 0 }}
                                 className="space-y-6"
                             >
-                                <Card className="flex flex-col sm:flex-row gap-8 bg-white border-white shadow-2xl shadow-slate-200/50 relative overflow-hidden">
-                                    {/* Glassmorphic Background decoration */}
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                                <Card className="flex flex-col sm:flex-row gap-8 bg-white border-white/60 shadow-2xl shadow-slate-200/60 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-40 h-40 bg-teal-400/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
 
                                     <div className="w-40 h-40 bg-gray-50 rounded-2xl p-4 flex-shrink-0 flex items-center justify-center border border-gray-100 z-10">
                                         <img
@@ -430,9 +431,9 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                 </Card>
 
                                 {/* AI Analysis Section */}
-                                <Card className="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100">
+                                <Card className="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100 shadow-lg shadow-indigo-100/60">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <div className="p-2 bg-indigo-600 rounded-lg text-white">
+                                        <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
                                             <Sparkles className="w-5 h-5" />
                                         </div>
                                         <div>
@@ -462,7 +463,7 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                 </Card>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <Card className="border-slate-100">
+                                    <Card className="border-slate-100 bg-white/90 shadow-lg shadow-slate-200/50">
                                         <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                                             <div className="w-1.5 h-6 bg-primary rounded-full"></div>
                                             Nutrition Facts (100g)
@@ -476,7 +477,7 @@ Provide the clinical nutrition verdict according to your instructions.`;
                                         </div>
                                     </Card>
 
-                                    <Card className="border-slate-100">
+                                    <Card className="border-slate-100 bg-white/90 shadow-lg shadow-slate-200/50">
                                         <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                                             <div className="w-1.5 h-6 bg-secondary rounded-full"></div>
                                             Processing & Additives
@@ -516,13 +517,13 @@ Provide the clinical nutrition verdict according to your instructions.`;
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="h-full min-h-[400px] flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 rounded-3xl"
+                                className="h-full min-h-[420px] flex flex-col items-center justify-center text-center p-10 border border-slate-200/70 rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl shadow-slate-200/40"
                             >
-                                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                                <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
                                     <ScanBarcode className="w-10 h-10 text-slate-300" />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-700 mb-2">Ready to Scan</h3>
-                                <p className="text-gray-400 max-w-xs mb-8">
+                                <h3 className="text-xl font-bold text-slate-800 mb-2">Ready to Scan</h3>
+                                <p className="text-slate-500 max-w-sm mb-8">
                                     Use your device camera to scan a product barcode or enter the digits manually to see nutritional data.
                                 </p>
                                 <div className="flex gap-4">
