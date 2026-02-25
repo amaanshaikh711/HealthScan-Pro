@@ -1,14 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from '../components/UI/Card';
-import { Button } from '../components/UI/Button';
-import { Send, Bot, User, Loader2, Sparkles, Apple, Flame, Activity, Zap, Info, RotateCcw } from 'lucide-react';
+import { Send, Bot, User, Apple, Flame, Activity, Zap, Info, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Initialize Gemini API
-// It's recommended to move this to an environment variable in production
-const API_KEY = "AIzaSyDYYNbXJ6td2y0I-izcS1QGyAZ2g_ltQE0";
-const genAI = new GoogleGenerativeAI(API_KEY);
+import { findBestFallbackAnswer } from './novaFallbackFaq';
 
 type Message = {
     id: string;
@@ -17,11 +11,37 @@ type Message = {
     timestamp: Date;
 };
 
+type DeepSeekRole = 'system' | 'user' | 'assistant';
+
+type DeepSeekMessage = {
+    role: DeepSeekRole;
+    content: string;
+};
+
+type DeepSeekResponse = {
+    choices?: Array<{
+        message?: {
+            content?: string;
+        };
+    }>;
+    error?: {
+        message?: string;
+        type?: string;
+        code?: string | number;
+    };
+};
+
+const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY;
+const DEEPSEEK_BASE_URL = import.meta.env.VITE_DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
+const DEEPSEEK_CHAT_URL = `${DEEPSEEK_BASE_URL.replace(/\/$/, '')}/v1/chat/completions`;
+const REQUEST_TIMEOUT_MS = 30000;
+const CHAT_PAGE_BACKGROUND = 'linear-gradient(135deg, #F8FBFD 0%, #F1FAF9 40%, #ECF7F6 70%, #FFFFFF 100%)';
+
 const QUICK_QUERIES = [
-    { label: "Weight Loss", icon: <Flame className="w-3 h-3" />, prompt: "Can you suggest a healthy 1500 calorie meal plan for weight loss?" },
-    { label: "Muscle Gain", icon: <Zap className="w-3 h-3" />, prompt: "What are the best high-protein snacks for muscle recovery?" },
-    { label: "Heart Health", icon: <Activity className="w-3 h-3" />, prompt: "What is an ideal DASH diet breakfast for heart health?" },
-    { label: "High Fiber", icon: <Apple className="w-3 h-3" />, prompt: "Suggest some high-fiber foods to improve my digestion." }
+    { label: 'Weight Loss', icon: <Flame className="w-3 h-3" />, prompt: 'Can you suggest a healthy 1500 calorie meal plan for weight loss?' },
+    { label: 'Muscle Gain', icon: <Zap className="w-3 h-3" />, prompt: 'What are the best high-protein snacks for muscle recovery?' },
+    { label: 'Heart Health', icon: <Activity className="w-3 h-3" />, prompt: 'What is an ideal DASH diet breakfast for heart health?' },
+    { label: 'High Fiber', icon: <Apple className="w-3 h-3" />, prompt: 'Suggest some high-fiber foods to improve my digestion.' }
 ];
 
 const SYSTEM_INSTRUCTION = `You are Dr. Nova, a world-class AI Nutritionist and Medical Dietitian with a specialization in preventive medicine. 
@@ -43,6 +63,115 @@ Character:
 - Warm, professional, empathetic, and clinical.
 - You celebrate user wins and provide constructive adjustments for challenges.`;
 
+const getHttpErrorMessage = (status: number): string => {
+    if (status === 400) return 'Bad request (400). Please adjust your query and retry.';
+    if (status === 401) return 'Authentication failed (401). Verify your DeepSeek API key.';
+    if (status === 402) return 'Insufficient balance (402). Please top up your DeepSeek credits and try again.';
+    if (status === 403) return 'Access denied (403). Your key may not have permission for this API.';
+    if (status === 404) return 'Endpoint or model not found (404). Check model name and base URL.';
+    if (status === 408) return 'Request timeout (408). Please try again.';
+    if (status === 422) return 'Request validation failed (422).';
+    if (status === 429) return 'Rate limit reached (429). Please wait and retry.';
+    if (status >= 500) return 'DeepSeek service is temporarily unavailable (5xx).';
+    return `Unexpected API error (HTTP ${status}).`;
+};
+
+const mapMessagesToDeepSeek = (history: Message[], latestUserInput: string): DeepSeekMessage[] => [
+    { role: 'system', content: SYSTEM_INSTRUCTION },
+    ...history.map((msg) => ({ role: msg.role, content: msg.content })),
+    { role: 'user', content: latestUserInput }
+];
+
+const createLocalNovaResponse = (query: string): string => {
+    const matchedAnswer = findBestFallbackAnswer(query);
+    if (matchedAnswer) {
+        return matchedAnswer;
+    }
+
+    const q = query.toLowerCase();
+
+    if (q.includes('chest pain') || q.includes('severe allergy') || q.includes('anaphylaxis') || q.includes('fainting')) {
+        return `As an AI, I cannot provide an official medical diagnosis. Please consult a physician immediately for these symptoms.
+
+While waiting for care:
+- Avoid new foods/supplements.
+- Stay hydrated with small sips of water.
+- Keep a list of recent foods/medications for your doctor.`;
+    }
+
+    if (q.includes('weight loss') || q.includes('fat loss') || q.includes('lose weight')) {
+        return `**Weight Loss Framework (Clinical Safe)**
+- Target a moderate calorie deficit: ~300-500 kcal/day.
+- Protein goal: 1.6-2.0 g/kg body weight daily.
+- Fiber goal: 25-35 g/day to improve satiety.
+
+**Sample Day**
+- Breakfast: Greek yogurt + berries + oats
+- Lunch: Grilled chicken/quinoa salad
+- Dinner: Paneer/tofu + vegetables + millet
+- Snack: Apple + nuts
+
+If you share age, weight, height, and activity level, I can give exact macro targets.`;
+    }
+
+    if (q.includes('muscle') || q.includes('protein') || q.includes('bulk') || q.includes('gain')) {
+        return `**Muscle Gain Nutrition Plan**
+- Protein: 1.8-2.2 g/kg body weight.
+- Calories: mild surplus of 200-300 kcal/day.
+- Distribute protein across 4-5 feedings.
+
+**High-Quality Protein Options**
+- Eggs, chicken, fish, paneer, tofu, Greek yogurt, whey.
+
+**Post-Workout Plate**
+- 25-35 g protein + 40-80 g carbs + fluids/electrolytes.`;
+    }
+
+    if (q.includes('heart') || q.includes('cholesterol') || q.includes('bp') || q.includes('blood pressure')) {
+        return `**Heart-Healthy Guidance**
+- Follow DASH-style pattern: high vegetables, fruit, legumes, whole grains.
+- Limit sodium to ~1500-2000 mg/day when BP is elevated.
+- Prefer unsaturated fats (nuts, seeds, olive oil, fish).
+- Reduce ultra-processed and high-trans-fat foods.
+
+If you share your BP and lipid profile, I can tailor meal choices.`;
+    }
+
+    if (q.includes('fiber') || q.includes('digestion') || q.includes('constipation') || q.includes('gut')) {
+        return `**Digestive Health Plan**
+- Fiber: add gradually toward 25-35 g/day.
+- Hydration: 2-3 L/day depending on activity/heat.
+- Include fermented foods: yogurt, kefir, kimchi (if tolerated).
+
+**Easy Fiber Upgrades**
+- Add chia/flax to breakfast.
+- Replace refined grains with whole grains.
+- Add 1 fruit + 1 salad daily.`;
+    }
+
+    if (q.includes('diabetes') || q.includes('blood sugar') || q.includes('glucose')) {
+        return `**Blood Sugar Stabilization**
+- Pair carbs with protein/fat at each meal.
+- Prefer low-glycemic carbs and high-fiber foods.
+- Keep meal timing consistent and avoid large sugar loads.
+
+**Practical Meal Structure**
+- 1/2 plate non-starchy vegetables
+- 1/4 lean protein
+- 1/4 whole-grain or legume carbs`;
+    }
+
+    return `**Personalized Nutrition Guidance**
+- Focus on high-protein, high-fiber whole foods.
+- Keep hydration consistent across the day.
+- Reduce refined sugars and highly processed snacks.
+
+Share your goal (fat loss, muscle gain, gut health, heart health), and I will create a complete meal plan with calories and macros.`;
+};
+
+const isInsufficientBalanceError = (message: string): boolean =>
+    message.toLowerCase().includes('insufficient balance') || message.includes('402');
+
 export const ChatNova = () => {
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -54,36 +183,31 @@ export const ChatNova = () => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isLocalMode, setIsLocalMode] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [chatSession, setChatSession] = useState<any>(null);
 
-    // Initialize chat session on mount
     useEffect(() => {
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            systemInstruction: SYSTEM_INSTRUCTION
-        });
-        const chat = model.startChat({
-            history: [],
-            generationConfig: {
-                maxOutputTokens: 1000,
-                temperature: 0.7,
-            },
-        });
-        setChatSession(chat);
+        if (!DEEPSEEK_API_KEY) {
+            setIsLocalMode(true);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: 'DeepSeek key is missing, so Nova switched to **Local Guidance Mode**. You can still ask nutrition questions and get actionable guidance.',
+                    timestamp: new Date()
+                }
+            ]);
+        }
     }, []);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
     useEffect(() => {
-        scrollToBottom();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
     const handleSend = async (userPrompt?: string) => {
-        const query = userPrompt || input;
-        if (!query.trim() || isLoading || !chatSession) return;
+        const query = (userPrompt || input).trim();
+        if (!query || isLoading) return;
 
         const userMessage: Message = {
             id: Date.now().toString(),
@@ -92,14 +216,72 @@ export const ChatNova = () => {
             timestamp: new Date()
         };
 
-        setMessages(prev => [...prev, userMessage]);
+        const conversationForModel = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
+        setMessages((prev) => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
 
+        if (!DEEPSEEK_API_KEY || isLocalMode) {
+            const localResponse: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: `${!DEEPSEEK_API_KEY ? 'Using **Local Guidance Mode** because API key is not configured.\n\n' : ''}${createLocalNovaResponse(query)}`,
+                timestamp: new Date()
+            };
+            setMessages((prev) => [...prev, localResponse]);
+            setIsLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
         try {
-            const result = await chatSession.sendMessage(query);
-            const response = await result.response;
-            const text = response.text();
+            const payload = {
+                model: 'deepseek-chat',
+                messages: mapMessagesToDeepSeek(conversationForModel, query),
+                temperature: 0.7,
+                max_tokens: 1000,
+                stream: false
+            };
+
+            const response = await fetch(DEEPSEEK_CHAT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${DEEPSEEK_API_KEY}`
+                },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+
+            const requestId = response.headers.get('x-request-id') || response.headers.get('request-id');
+
+            if (!response.ok) {
+                let detail = '';
+                try {
+                    const errorData = (await response.json()) as DeepSeekResponse;
+                    detail = errorData?.error?.message || '';
+                } catch {
+                    try {
+                        detail = await response.text();
+                    } catch {
+                        detail = '';
+                    }
+                }
+
+                const friendly = getHttpErrorMessage(response.status);
+                const supportHint = requestId ? ` Request ID: ${requestId}.` : '';
+                const detailText = detail ? ` Details: ${detail}` : '';
+                throw new Error(`${friendly}${supportHint}${detailText}`);
+            }
+
+            const data = (await response.json()) as DeepSeekResponse;
+            const text = data?.choices?.[0]?.message?.content?.trim();
+
+            if (!text) {
+                throw new Error('Received an empty response from DeepSeek.');
+            }
 
             const botMessage: Message = {
                 id: (Date.now() + 1).toString(),
@@ -108,56 +290,62 @@ export const ChatNova = () => {
                 timestamp: new Date()
             };
 
-            setMessages(prev => [...prev, botMessage]);
-        } catch (error: any) {
-            console.error("Gemini API Error:", error);
-            let errorMessage = "I apologize, but I'm having trouble accessing my medical database. ";
+            setMessages((prev) => [...prev, botMessage]);
+        } catch (error) {
+            console.error('DeepSeek API error:', error);
+            let errorMessage = "I switched to **Local Guidance Mode** so you can continue without interruption.\n\n";
+            const rawMessage = error instanceof Error ? error.message : '';
 
-            if (error.message?.includes("404")) {
-                errorMessage += "There seems to be an issue with my system connection (404). Please ensure the API service is active.";
-            } else if (error.message?.includes("403")) {
-                errorMessage += "My access key seems to be restricted. Please verify your API key permissions.";
+            if (isInsufficientBalanceError(rawMessage)) {
+                setIsLocalMode(true);
+            }
+
+            if (error instanceof DOMException && error.name === 'AbortError') {
+                errorMessage += 'DeepSeek request timed out.\n\n';
+            } else if (error instanceof TypeError) {
+                errorMessage += 'DeepSeek network error detected.\n\n';
+            } else if (error instanceof Error) {
+                errorMessage += `${error.message}\n\n`;
             } else {
-                errorMessage += "Please try again in a moment.";
+                errorMessage += 'Temporary API issue.\n\n';
             }
 
             const botErrorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: errorMessage,
+                content: `${errorMessage}${createLocalNovaResponse(query)}`,
                 timestamp: new Date()
             };
-            setMessages(prev => [...prev, botErrorMessage]);
+            setMessages((prev) => [...prev, botErrorMessage]);
         } finally {
+            clearTimeout(timeout);
             setIsLoading(false);
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+    const handleKeyPress = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
             handleSend();
         }
     };
 
     const clearHistory = () => {
-        setMessages([{
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: "History cleared. I'm ready for new questions, Dr. Nova at your service!",
-            timestamp: new Date()
-        }]);
-        // Re-init chat session
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            systemInstruction: SYSTEM_INSTRUCTION
-        });
-        setChatSession(model.startChat({ history: [] }));
+        setMessages([
+            {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: "History cleared. I'm ready for new questions, Dr. Nova at your service!",
+                timestamp: new Date()
+            }
+        ]);
     };
 
     return (
-        <div className="h-[calc(100vh-8rem)] flex flex-col gap-4">
-            {/* Header Area */}
+        <div
+            className="h-[calc(100vh-8rem)] flex flex-col gap-4"
+            style={{ background: CHAT_PAGE_BACKGROUND }}
+        >
             <div className="flex items-center justify-between py-2 px-1">
                 <div className="flex items-center gap-3">
                     <div className="relative">
@@ -171,6 +359,7 @@ export const ChatNova = () => {
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">Pro Expert</span>
                             <span className="text-[10px] text-slate-400 font-medium">Available 24/7</span>
+                            {isLocalMode && <span className="text-[10px] font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Local Guidance Mode</span>}
                         </div>
                     </div>
                 </div>
@@ -184,7 +373,6 @@ export const ChatNova = () => {
             </div>
 
             <Card className="flex-1 flex flex-col overflow-hidden border-white/60 bg-white/40 backdrop-blur-3xl shadow-2xl shadow-slate-200/50 rounded-[32px]">
-                {/* Chat Display */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
                     <AnimatePresence mode="popLayout">
                         {messages.map((msg) => (
@@ -195,21 +383,14 @@ export const ChatNova = () => {
                                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${msg.role === 'user'
-                                            ? 'bg-slate-800 text-white'
-                                            : 'bg-gradient-to-br from-primary to-secondary text-white'
-                                        }`}>
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-slate-800 text-white' : 'bg-gradient-to-br from-primary to-secondary text-white'}`}>
                                         {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                                     </div>
 
-                                    <div className={`p-4 rounded-[24px] shadow-sm relative ${msg.role === 'user'
-                                            ? 'bg-slate-800 text-white rounded-tr-none'
-                                            : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'
-                                        }`}>
+                                    <div className={`p-4 rounded-[24px] shadow-sm relative ${msg.role === 'user' ? 'bg-slate-800 text-white rounded-tr-none' : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'}`}>
                                         <div className="text-sm leading-relaxed prose prose-sm max-w-none">
-                                            {/* Simple Markdown-like replacement for Bold (**) and Bullet Points (-) */}
                                             {msg.content.split('\n').map((line, i) => (
-                                                <p key={i} className={line.startsWith('- ') ? 'ml-2 mb-1 pl-4 relative before:content-["•"] before:absolute before:left-0' : 'mb-2 last:mb-0'}>
+                                                <p key={i} className={line.startsWith('- ') ? "ml-2 mb-1 pl-4 relative before:content-['-'] before:absolute before:left-0" : 'mb-2 last:mb-0'}>
                                                     {line.replace(/^- /, '').split('**').map((part, j) => (
                                                         j % 2 === 1 ? <strong key={j} className="font-black">{part}</strong> : part
                                                     ))}
@@ -240,9 +421,7 @@ export const ChatNova = () => {
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input Area */}
                 <div className="p-6 bg-white/60 border-t border-white/80">
-                    {/* Quick Queries */}
                     <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-none no-scrollbar">
                         {QUICK_QUERIES.map((q) => (
                             <button
@@ -260,7 +439,7 @@ export const ChatNova = () => {
                         <input
                             type="text"
                             value={input}
-                            onChange={(e) => setInput(e.target.value)}
+                            onChange={(event) => setInput(event.target.value)}
                             onKeyDown={handleKeyPress}
                             placeholder="Ask Dr. Nova anything about your health..."
                             className="w-full pl-6 pr-14 py-4 bg-white border-2 border-slate-50 focus:border-primary/30 rounded-2xl transition-all outline-none text-slate-700 placeholder:text-slate-400 font-medium shadow-inner"
@@ -269,10 +448,7 @@ export const ChatNova = () => {
                         <button
                             onClick={() => handleSend()}
                             disabled={isLoading || !input.trim()}
-                            className={`absolute right-2 p-3 rounded-xl transition-all ${input.trim()
-                                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25 hover:scale-105 active:scale-95'
-                                    : 'bg-slate-100 text-slate-300'
-                                }`}
+                            className={`absolute right-2 p-3 rounded-xl transition-all ${input.trim() ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25 hover:scale-105 active:scale-95' : 'bg-slate-100 text-slate-300'}`}
                         >
                             <Send className="w-5 h-5" />
                         </button>
@@ -287,4 +463,3 @@ export const ChatNova = () => {
         </div>
     );
 };
-

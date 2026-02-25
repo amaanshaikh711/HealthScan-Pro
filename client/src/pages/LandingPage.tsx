@@ -33,7 +33,7 @@ export const LandingPage = () => {
                         </span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Link to="/auth/login" className="text-gray-600 font-medium hover:text-blue-600 transition-colors">Login</Link>
+                        <Link to="/sign-in" className="text-gray-600 font-medium hover:text-blue-600 transition-colors">Login</Link>
                         <Link to="/dashboard">
                             <Button className="rounded-full px-6 shadow-blue-500/25">Get Started</Button>
                         </Link>

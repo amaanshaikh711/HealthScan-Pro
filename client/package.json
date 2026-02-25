@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.1",
     "@google/generative-ai": "^0.24.1",
     "@lottiefiles/dotlottie-wc": "^0.8.11",
+    "@vapi-ai/web": "^2.5.2",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "axios": "^1.6.0",

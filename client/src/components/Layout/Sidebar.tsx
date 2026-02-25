@@ -1,7 +1,8 @@
-import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Activity, ScanBarcode, Utensils, MessageCircle, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Activity, ScanBarcode, Utensils, MessageCircle, Mic, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
+import { useClerk } from '@clerk/clerk-react';
 
 const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -9,10 +10,18 @@ const menuItems = [
     { icon: ScanBarcode, label: 'Food Scanner', path: '/scanner' },
     { icon: Utensils, label: 'Meal Planner', path: '/meal-planner' },
     { icon: MessageCircle, label: 'Ask Nova', path: '/chat' },
+    { icon: Mic, label: 'Talk to Nova', path: '/talk-to-nova' },
 ];
 
 export const Sidebar = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { signOut } = useClerk();
+
+    const handleLogout = async () => {
+        await signOut();
+        navigate('/');
+    };
 
     return (
         <aside className="fixed left-0 top-0 h-screen w-64 bg-white/80 backdrop-blur-xl border-r border-gray-100 hidden md:flex flex-col z-50 transition-all duration-300">
@@ -29,7 +38,7 @@ export const Sidebar = () => {
 
             <nav className="flex-1 px-4 space-y-2 mt-4">
                 {menuItems.map((item) => {
-                    const isActive = location.pathname === item.path;
+                    const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
                     return (
                         <Link key={item.path} to={item.path} className="relative block">
                             {isActive && (
@@ -57,7 +66,10 @@ export const Sidebar = () => {
             </nav>
 
             <div className="p-4 border-t border-gray-100">
-                <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-red-500 hover:bg-red-50 w-full transition-colors font-medium">
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-red-500 hover:bg-red-50 w-full transition-colors font-medium"
+                >
                     <LogOut className="w-5 h-5" />
                     <span>Logout</span>
                 </button>
